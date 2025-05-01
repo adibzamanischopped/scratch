@@ -1,0 +1,107 @@
+import pygame
+import sys
+
+# Initialize pygame
+pygame.init()
+screen = pygame.display.set_mode((500, 400))
+pygame.display.set_caption("Tip Keeper")
+font = pygame.font.SysFont(None, 28)
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GRAY = (200, 200, 200)
+
+# Tip percentage options (the percent you get to keep)
+buttons = [
+    {"label": "15%", "percent": 0.15, "rect": pygame.Rect(100, 150, 80, 40)},
+    {"label": "18%", "percent": 0.18, "rect": pygame.Rect(200, 150, 80, 40)},
+    {"label": "20%", "percent": 0.20, "rect": pygame.Rect(300, 150, 80, 40)},
+]
+
+# Load narrator image
+try:
+    narrator_img = pygame.image.load("narrator.png")
+    narrator_img = pygame.transform.scale(narrator_img, (80, 80))  # Resize as needed
+except pygame.error:
+    narrator_img = None
+    print("Warning: narrator.png not found. Narrator image will not be shown.")
+
+# State variables
+total_tip = None
+percent_keep = None
+amount_kept = None
+amount_lost = None
+input_active = True
+user_text = ''
+narrator_text = "Enter total tip received!"
+
+def round_to_cents(amount):
+    return round(amount, 2)
+
+def draw_text(text, x, y, color=BLACK):
+    surface = font.render(text, True, color)
+    screen.blit(surface, (x, y))
+
+# Main loop
+while True:
+    screen.fill(WHITE)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+        # Handle user input
+        if input_active:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    try:
+                        total_tip = float(user_text)
+                        input_active = False
+                        narrator_text = "Click how much you get to keep!"
+                    except ValueError:
+                        user_text = ''
+                        narrator_text = "Please enter a valid number!"
+                elif event.key == pygame.K_BACKSPACE:
+                    user_text = user_text[:-1]
+                else:
+                    user_text += event.unicode
+        else:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                for button in buttons:
+                    if button["rect"].collidepoint(mouse_pos):
+                        percent_keep = button["percent"]
+                        amount_kept = round_to_cents(total_tip * percent_keep)
+                        amount_lost = round_to_cents(total_tip - amount_kept)
+                        narrator_text = "Here's what you keep!"
+
+    # Display input or buttons
+    if input_active:
+        draw_text("Enter total tip amount and press Enter:", 50, 50)
+        pygame.draw.rect(screen, GRAY, (50, 80, 400, 30))
+        draw_text(user_text, 60, 85)
+    else:
+        draw_text(f"Total Tip Received: ${total_tip:.2f}", 50, 50)
+        draw_text("Click your keep percentage:", 50, 100)
+
+        for button in buttons:
+            pygame.draw.rect(screen, GRAY, button["rect"])
+            draw_text(button["label"], button["rect"].x + 15, button["rect"].y + 10)
+
+    # Show results
+    if amount_kept is not None:
+        draw_text(f"You Keep: ${amount_kept:.2f}", 50, 250)
+        draw_text(f"Rest Goes Elsewhere: ${amount_lost:.2f}", 50, 280)
+
+    # Narrator image
+    if narrator_img:
+        screen.blit(narrator_img, (10, 300))
+
+    # Speech bubble
+    pygame.draw.rect(screen, WHITE, (100, 310, 380, 60))
+    pygame.draw.rect(screen, BLACK, (100, 310, 380, 60), 2)
+    draw_text(narrator_text, 110, 330)
+
+    pygame.display.flip()
